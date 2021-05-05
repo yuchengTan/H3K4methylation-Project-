@@ -1,0 +1,56 @@
+setwd('../enhanced volcano plot/')
+
+#if (!requireNamespace('BiocManager', quietly = TRUE))
+#install.packages('BiocManager')
+
+#BiocManager::install('EnhancedVolcano')
+
+df<-read.table("wdr5_vs_N2_emb.csv", header = T, sep = ",", stringsAsFactors = F)
+
+rownames(df)=df$gene_name
+
+
+library(ggplot2)
+library(ggrepel)
+library(EnhancedVolcano)
+
+keyvals <- ifelse(
+  df$log2FoldChange <= -1 , 'royalblue',
+  ifelse(df$log2FoldChange >= 1 , 'gold',
+  
+         'black'))
+keyvals[is.na(keyvals)] <- 'black'
+names(keyvals)[keyvals == 'gold'] <- 'up'
+names(keyvals)[keyvals == 'black'] <- 'No.Sig'
+names(keyvals)[keyvals == 'royalblue'] <- 'down'
+
+
+
+
+EnhancedVolcano(df,
+                lab = rownames(df),
+                x = 'log2FoldChange',
+                y = 'pval',
+                xlim = c(-11, 11),
+       
+                selectLab = c( "dod-19","irg-2","irg-7" ),
+                xlab = bquote(~Log[2]~ 'fold change'),
+                title = 'wdr5-/- emb',
+                subtitle = "DESeq2 results",
+                pCutoff = 0.01,
+                FCcutoff = 1,
+                pointSize = 2.0,
+                labSize = 4.0,
+                legendPosition = 'right',
+                legendLabSize = 14,
+                legendIconSize = 4.0,
+                
+                colCustom = keyvals,
+                colAlpha = 1,
+                
+                drawConnectors = TRUE,
+                widthConnectors = 1.0,
+                colConnectors = 'black',
+         
+                )
+              
