@@ -1,0 +1,22 @@
+# basemean N2 vs log2foldchnage  rbbp5_emb
+
+
+getwd()
+setwd("../Desktop/H3K4 project data/")
+
+rbbp5_emb<-read.table("wdr5_vs_N2_YA.csv", header = T, sep = ",", stringsAsFactors = F)
+head(rbbp5_emb)
+
+
+#group the genes 'up-regulated', 'down-regulated' and 'no sig change'
+rbbp5_emb$group<-ifelse(rbbp5_emb$log2FoldChange>=1 & rbbp5_emb$pvalue<=0.01, "Up",
+                              ifelse(rbbp5_emb$log2FoldChange<= -1 & rbbp5_emb$pvalue<=0.01, "Down","Not significant"))
+table(rbbp5_emb$group)
+
+library("ggplot2")
+cols<-c("blue","gray", "red")
+plot(log2FoldChange~log10(meanA), data = rbbp5_emb,
+     col=cols[as.factor(rbbp5_emb$group)],
+     pch=20,
+     ylab = "Normalised FoldChange (log2)",
+     xlab="Normalised Gene Expression in WT (log10)" )
