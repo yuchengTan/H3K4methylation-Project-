@@ -1,0 +1,82 @@
+getwd()
+setwd("../rbbp5_vs_N2_emb/")
+getwd()
+
+#read the table of rbbp5_vs_N2_emb
+rbbp5_vs_N2_emb<-read.table('rbbp5_vs_N2_emb.csv', header = T, sep = ",", stringsAsFactors = F)
+names(rbbp5_vs_N2_emb)
+head(rbbp5_vs_N2_emb)
+tail(rbbp5_vs_N2_emb)
+nrow(rbbp5_vs_N2_emb)
+sapply(rbbp5_vs_N2_emb, class)
+dim(rbbp5_vs_N2_emb)
+
+#remove "Wormbase:" and add a new colum for proper gene ID "WBGeneID"
+WBGeneID <- gsub ("Wormbase:", "", rbbp5_vs_N2_emb$Wormbase.WBGene_UID)
+rbbp5_vs_N2_emb$WBGeneID <- WBGeneID
+
+
+#add a column for gene name 
+rbbp5_vs_N2_emb_gene_list<-read.table("rbbp5_vs_N2_emb gene_name.CSV", header = T, sep = ",", stringsAsFactors = F)
+dim(rbbp5_vs_N2_emb_gene_list)
+rbbp5_vs_N2_emb$gene_name<-rbbp5_vs_N2_emb_gene_list[,2]
+
+
+#id the misregualted genes which are 2 fold minimum and with a pvalue of = or < than 0.01
+rbbp5_vs_N2_emb_allmis<-subset(rbbp5_vs_N2_emb, log2FoldChange>=1 & pval<=0.01 | log2FoldChange<= -1 & pval<=0.01)
+nrow(rbbp5_vs_N2_emb_allmis)
+class(nrow(rbbp5_vs_N2_emb_allmis))
+
+
+
+#writing the table
+write.table(rbbp5_vs_N2_emb_allmis, file = "./rbbp5_vs_N2_emb_allmis.csv", sep = ",", row.names = F)
+ 
+#group the genes 'up-regulated', 'down-regulated' and 'no sig change'
+rbbp5_vs_N2_emb$group<-ifelse(rbbp5_vs_N2_emb$log2FoldChange>=1 & rbbp5_vs_N2_emb$pval<=0.01, "Up",
+                              ifelse(rbbp5_vs_N2_emb$log2FoldChange<= -1 & rbbp5_vs_N2_emb$pval<=0.01, "Down","Not significant"))
+
+head(rbbp5_vs_N2_emb)
+table(rbbp5_vs_N2_emb$group)
+
+#write up and down regulated genes
+Up_select_vector= rbbp5_vs_N2_emb$log2FoldChange>=1 & rbbp5_vs_N2_emb$pval<=0.01
+Up_gene <- rbbp5_vs_N2_emb[Up_select_vector,]
+write.table(Up_gene, file = "./rbbp5_emb_up_gene.csv", sep = ",", row.names = F) # up genes
+
+Down_select_vector= rbbp5_vs_N2_emb$log2FoldChange<= -1 & rbbp5_vs_N2_emb$pval<=0.01
+Down_gene <- rbbp5_vs_N2_emb[Down_select_vector,]
+write.table(Down_gene, file = "./rbbp5_emb_down_gene.csv", sep = ",", row.names = F) # down genes
+
+
+
+
+
+
+#plot the volcano map
+library(ggplot2)
+ggplot(rbbp5_vs_N2_emb,aes(x=log2FoldChange, y=-log10(pval)))+
+  geom_point(aes(color=group))+
+  scale_color_manual(values = c("dodgerblue", "gray", "firebrick"))
+
+
+
+#label gene names
+rbbp5_vs_N2_emb$pvalue_log10<-(-log10(rbbp5_vs_N2_emb$pval))
+df_label<-rbbp5_vs_N2_emb[rbbp5_vs_N2_emb$pvalue_log10>=14,]
+
+dim(df_label)
+
+library(ggrepel)
+
+library(ggplot2)
+ggplot(rbbp5_vs_N2_emb,aes(x=log2FoldChange, y=-log10(pval)))+
+  geom_point(aes(color=group))+
+  scale_color_manual(values = c("dodgerblue", "gray", "firebrick"))+
+  geom_label_repel(data = df_label,aes(x=log2FoldChange, y=-log10(pval),label=gene_name))+
+  geom_vline(xintercept = c(-1, 1), lty = 2,colour="#000000")+ #dote line
+  geom_hline(yintercept = c(2), lty = 2,colour="#000000")+
+  theme_bw()
+
+#repel the names
+#install.packages("ggrepel")
