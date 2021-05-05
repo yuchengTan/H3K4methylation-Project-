@@ -1,0 +1,12 @@
+getwd()
+
+library(stringr)
+ff<-str_split("
+179454/176466/176605/174698/175205/179358/172773/178447/177782/185735/3565670/189711/173869/186774/189418/3565128
+
+", "/")
+
+niu<-as.data.frame(ff)
+dim(niu)
+
+write.table(niu,'result.txt',row.names = F,sep = '\t',quote = F)
