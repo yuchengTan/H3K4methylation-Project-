@@ -1,0 +1,71 @@
+rm(list=ls())
+setwd("../wdr5_YA_up_kegg/")
+library(GOplot)
+library(org.Ce.eg.db)
+#BiocManager::install('org.Ce.eg.db')
+library(ggplot2)
+library(dplyr)
+library(stringr)
+library(reshape2)
+library(clusterProfiler)
+
+df<-read.delim('wdr5_YA_up_gene.csv',sep = ',')
+gene<-bitr(df$gene_name, fromType = "SYMBOL", toType = "ENTREZID",OrgDb = "org.Ce.eg.db")
+
+
+enkegg<-enrichKEGG(gene=gene$ENTREZID, organism = 'cel',use_internal_data = T,pvalueCutoff = 0.05)
+
+enkegg2<-enkegg@result
+write.table(enkegg2,'gsea_kegg_result.txt',row.names = F,sep = '\t',quote = F)
+
+enkegg2<-enkegg@result
+
+
+library(tidyr)
+enkegg3<-as.data.frame(enkegg2 %>% top_n(n =10 , wt = -pvalue) %>%
+                               mutate(geneID = strsplit(as.character(geneID), "/")) %>% 
+                               unnest(geneID) )
+
+df2<-merge(df,gene, by.x='gene_name',by.y='SYMBOL',all=F)
+
+df3<-merge(df2,enkegg3,by.x='ENTREZID',by.y='geneID')
+df3$category<-'kegg'
+#df4<-as.data.frame(df3 %>% select(category,ENTREZID,Description,Count,gene_name,log2FoldChange,padj))
+#colnames(df4)<-c('category','ID','term','count','genes','logFC','adj_pval')
+df3$value<-1
+df4<-as.data.frame(df3 %>% select(gene_name,log2FoldChange,pvalue.y))
+colnames(df4)[2:3]<-c('logFC','pvalue')
+df5<-dcast(gene_name~Description,value.var ='value' ,data = df3)
+df5[is.na(df5)]<-0
+df6<-merge(df5,df4,by='gene_name')
+df6<-df6[!duplicated(df6$gene_name),]
+rownames(df6)<-df6$gene_name
+df6<-df6[,-1]
+df6$pvalue<-log10(df6$pvalue)
+
+
+min(df6$logFC,df6$pvalue)
+
+
+GOChord(df6, space = 0.02, 
+        gene.order = 'logFC', 
+        gene.space = 0.35, 
+        gene.size = 4,
+        nlfc = 2,
+        
+        process.label=10,
+        lfc.col=c('firebrick1','white','dodgerblue'),
+        lfc.max =max(df6$logFC,df6$pvalue),
+        lfc.min = min(df6$logFC,df6$pvalue)
+)
+
+
+pdf('kegg_enrich_plot.pdf',width = 20,height = 13)
+GOChord(df6, space = 0.02, 
+        gene.order = 'logFC', 
+        gene.space = 0.25, 
+        #gene.size = 4,
+        nlfc = 2,
+        process.label=8
+)
+dev.off()
