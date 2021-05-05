@@ -1,0 +1,45 @@
+#test
+rm(list=ls())
+setwd("../rbbp5_YA_up_go/")
+library(clusterProfiler)
+library(org.Ce.eg.db)
+#BiocManager::install('org.Ce.eg.db')
+library(ggplot2)
+library(dplyr)
+library(stringr)
+
+df<-read.delim("rbbp5_YA_up_gene.csv",sep = ',')
+
+gene<-bitr(df$gene_name, fromType = "SYMBOL", toType = "ENTREZID",OrgDb = "org.Ce.eg.db")
+#GO enrich
+engo<-enrichGO(gene=gene$ENTREZID,OrgDb = 'org.Ce.eg.db',ont='ALL',
+               pvalueCutoff =0.05, 
+               qvalueCutoff = 0.05)
+enGO2<-as.data.frame(engo@result)
+write.table(enGO2,'gsea_go_result.txt',row.names = F,sep = '\t',quote = F)
+
+temp<-as.data.frame(str_split_fixed(enGO2$GeneRatio,'/',n=2))
+temp<-as.data.frame(apply(temp, MARGIN = 2, as.numeric))
+enGO2$RichFactor<-temp$V1/temp$V2
+df1<-as.data.frame(enGO2 %>%  select(Description,RichFactor,Count,pvalue) %>%
+                     top_n(n =20 , wt = -pvalue))
+df1<-df1[order(df1$RichFactor,decreasing = F),]
+df1$Description<-factor(df1$Description,levels=as.character(df1$Description))
+
+
+ggplot(df1,aes(RichFactor,Description))+ 
+  geom_point(aes(size=Count,color=pvalue))+
+  labs(color='p value',size="Count")+
+  scale_color_continuous(type = "gradient")+
+  ylab(NULL)+ theme_bw()+
+  guides(
+    color = guide_colorbar(order = 0),
+    size = guide_legend(order = 1) )+
+  theme( axis.text.x  = element_text(angle = 0,size=10, colour="black", face = "bold",hjust = 0.5),  
+         axis.title.x = element_text(vjust=0.1, face = "bold"),
+         axis.text.y = element_text(size=10,hjust=1,
+                                    colour="black", face = "bold"),
+         axis.title.y = element_text(vjust=0.2, size = 12, face = "bold"),
+         legend.text=element_text(size=8))
+ggsave('go_plot.pdf',width =8,height = 6)
+
